@@ -1,0 +1,63 @@
+{
+  "name": "time-tracker",
+  "version": "0.1.0",
+  "description": "Passive desktop time tracker — samples the active window, classifies time by project/task, exports a daily CSV.",
+  "main": "dist/main.js",
+  "type": "module",
+  "scripts": {
+    "build:ui": "vite build",
+    "build:main": "tsc",
+    "build": "npm run build:main && npm run build:ui",
+    "dev:ui": "vite",
+    "start": "npm run build && electron .",
+    "export": "npm run build:main && node dist/cli-export.js",
+    "icon": "node scripts/generate-icon.mjs",
+    "dist:win": "npm run build && electron-builder --win nsis"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@headlessui/react": "^2.2.10",
+    "@heroicons/react": "^2.2.0",
+    "clsx": "^2.1.1",
+    "get-windows": "^9.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.0",
+    "@tailwindcss/vite": "^4.3.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^5.7.0",
+    "vite": "^8.0.14"
+  },
+  "build": {
+    "appId": "com.concislabs.timetracker",
+    "productName": "TimeTracker",
+    "files": [
+      "dist/**/*",
+      "resources/**/*",
+      "node_modules/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/get-windows/**"
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "TimeTracker-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

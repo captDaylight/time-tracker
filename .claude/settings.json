@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(node:*)",
+      "Bash(node_modules/.bin/:*)",
+      "Bash(./node_modules/.bin/:*)",
+      "Bash(pkill:*)",
+      "Bash(curl:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(rm:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(file:*)",
+      "Bash(sips:*)",
+      "Bash(screencapture:*)",
+      "Bash(printf:*)",
+      "Bash(echo:*)",
+      "Bash(test:*)",
+      "Bash(true)",
+      "Bash(python3:*)",
+      "Bash(git:*)",
+      "Write",
+      "Edit",
+      "Read"
+    ]
+  }
+}

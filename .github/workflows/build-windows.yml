@@ -1,0 +1,35 @@
+name: Build Windows installer
+
+# Build the Windows .exe on a real Windows runner (so get-windows pulls its
+# Windows native binary and the NSIS installer is produced natively).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # lets you trigger a build manually from the Actions tab
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build app (main + UI)
+        run: npm run build
+
+      - name: Package Windows installer
+        run: npx electron-builder --win nsis --publish never
+
+      # Download from the run's "Artifacts" section.
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TimeTracker-Windows-Installer
+          path: dist/*.exe
+          if-no-files-found: error

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+out/
+*.log
+.DS_Store
+
+# Built UI (generated from ui/ by vite)
+resources/ui/
