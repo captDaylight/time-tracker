@@ -18,12 +18,22 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
+        # get-windows is an N-API prebuild; install fetches the win32-x64 binary.
         run: npm install
+
+      - name: Verify get-windows Windows binary is present
+        shell: bash
+        run: |
+          found=$(find node_modules/get-windows/lib/binding -name '*.node' | grep -i win32 || true)
+          echo "win32 binary: ${found:-NONE FOUND}"
+          test -n "$found"
 
       - name: Build app (main + UI)
         run: npm run build
 
       - name: Package Windows installer
+        # npmRebuild:false in package.json keeps electron-builder from recompiling
+        # the N-API prebuild (which fails on Python 3.12 with no distutils).
         run: npx electron-builder --win nsis --publish never
 
       # Download from the run's "Artifacts" section.

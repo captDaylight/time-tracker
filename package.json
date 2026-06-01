@@ -40,6 +40,7 @@
   "build": {
     "appId": "com.concislabs.timetracker",
     "productName": "TimeTracker",
+    "npmRebuild": false,
     "files": [
       "dist/**/*",
       "resources/**/*",
