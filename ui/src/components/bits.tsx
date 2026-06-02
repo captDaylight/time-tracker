@@ -1,16 +1,28 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
 
-export function StatCard({ value, label, tone = "default" }: { value: string; label: string; tone?: "default" | "warn" | "violet" | "muted" }) {
+export const STRIPE_BG =
+  "repeating-linear-gradient(45deg, #3a3f4b 0, #3a3f4b 3px, #16181d 3px, #16181d 6px)";
+
+export function StatCard({
+  value,
+  label,
+  tone = "default",
+}: {
+  value: string;
+  label: string;
+  tone?: "default" | "warn" | "violet" | "muted" | "striped";
+}) {
   const dot = {
     default: "bg-brand-500",
     warn: "bg-warn-500",
     violet: "bg-violet-500",
     muted: "bg-ink-400",
+    striped: "",
   }[tone];
   return (
     <div className="flex items-center gap-2.5 rounded-xl border border-ink-700/70 bg-ink-850 px-3.5 py-2">
-      <span className={clsx("size-2 rounded-full", dot)} />
+      <span className={clsx("size-2 rounded-full", dot)} style={tone === "striped" ? { backgroundImage: STRIPE_BG } : undefined} />
       <div className="leading-tight">
         <div className="text-base font-semibold tabular-nums text-ink-100">{value}</div>
         <div className="text-[11px] uppercase tracking-wide text-ink-400">{label}</div>

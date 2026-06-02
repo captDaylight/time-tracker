@@ -11,19 +11,19 @@ interface Props {
   projects: Project[];
   onSave: (payload: { category: "work" | "break"; project: string; task: string; detail: string }) => void;
   onClear: () => void;
-  onCancel: () => void;
+  onClose: () => void;
   onOpenShot: (shots: Shot[], index: number) => void;
 }
 
 type Field = "task" | "detail";
 
 /**
- * Expanded (accordion) row. Opening a row is read-only — it just reveals the
- * current values and the screenshots. Clicking a cell turns that one cell into an
- * input (project is a dropdown of configured projects). A Save bar appears only
- * once something actually changes; clicking outside closes the row when clean.
+ * Expanded (accordion) row. Opening a row is read-only — it reveals the current
+ * values and screenshots. Clicking a cell turns that one cell into an input.
+ * Changes auto-save on blur (text fields) or on change (project / type), so there
+ * is no Save/Cancel step. Clicking outside simply closes the row.
  */
-export function RowEditor({ block, projects, onSave, onClear, onCancel, onOpenShot }: Props) {
+export function RowEditor({ block, projects, onSave, onClear, onClose, onOpenShot }: Props) {
   const untracked = block.type === "away";
   const orig = useMemo(
     () => ({
@@ -43,14 +43,6 @@ export function RowEditor({ block, projects, onSave, onClear, onCancel, onOpenSh
   const [editingProject, setEditingProject] = useState(false);
   const [shots, setShots] = useState<Shot[] | null>(null);
 
-  const dirty =
-    cat !== orig.cat ||
-    project.trim() !== orig.project.trim() ||
-    task.trim() !== orig.task.trim() ||
-    detail.trim() !== orig.detail.trim();
-  const dirtyRef = useRef(dirty);
-  dirtyRef.current = dirty;
-
   useEffect(() => {
     let live = true;
     api
@@ -62,29 +54,50 @@ export function RowEditor({ block, projects, onSave, onClear, onCancel, onOpenSh
     };
   }, [block.start, block.end]);
 
-  // Click outside closes the row, but only when there are no unsaved changes.
+  // Persist the current values, with optional overrides for the field just changed
+  // (state updates are async, so the changed value is passed in explicitly). Only
+  // writes when something actually differs from the original, to avoid no-op saves.
+  const commit = (override?: Partial<{ cat: "work" | "break"; project: string; task: string; detail: string }>) => {
+    const next = { cat, project, task, detail, ...override };
+    const changed =
+      next.cat !== orig.cat ||
+      next.project.trim() !== orig.project.trim() ||
+      next.task.trim() !== orig.task.trim() ||
+      next.detail.trim() !== orig.detail.trim();
+    if (!changed) return;
+    onSave({
+      category: next.cat,
+      project: next.cat === "break" ? "" : next.project.trim(),
+      task: next.task.trim(),
+      detail: next.detail.trim(),
+    });
+  };
+
+  // Click outside the row closes it. Changes have already auto-saved on blur.
   // Ignore clicks inside any open popup/dialog (lightbox, listbox options).
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       const t = e.target as HTMLElement;
       if (t.closest(`[data-row-group="${block.id}"]`)) return;
       if (t.closest('[role="dialog"]') || t.closest('[role="listbox"]')) return;
-      if (dirtyRef.current) return;
-      onCancel();
+      onClose();
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
-  }, [block.id, onCancel]);
+  }, [block.id, onClose]);
 
-  const save = () =>
-    onSave({ category: cat, project: cat === "break" ? "" : project.trim(), task: task.trim(), detail: detail.trim() });
+  const setCategory = (c: "work" | "break") => {
+    setCat(c);
+    commit({ cat: c });
+  };
 
+  // Enter commits the field (blur saves); Escape closes the row.
   const onKey = (e: React.KeyboardEvent, allowNewline = false) => {
     if (e.key === "Enter" && !(allowNewline && e.shiftKey)) {
       e.preventDefault();
-      if (dirty) save();
+      (e.target as HTMLElement).blur();
     }
-    if (e.key === "Escape") onCancel();
+    if (e.key === "Escape") onClose();
   };
 
   const colorOf = (name: string) => projects.find((p) => p.name === name)?.color || "#6b7280";
@@ -92,7 +105,7 @@ export function RowEditor({ block, projects, onSave, onClear, onCancel, onOpenSh
   const inputCls =
     "w-full rounded-md border border-ink-600 bg-ink-900 px-2 py-1 text-sm text-ink-100 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500";
 
-  // Project cell: a dropdown of configured projects (with color dots).
+  // Project cell: a dropdown of configured projects (with color dots). Saves on select.
   const projectCell = () => {
     if (cat === "break") return <span className="text-sm text-ink-500 italic">Break / away</span>;
     if (!editingProject) {
@@ -119,6 +132,7 @@ export function RowEditor({ block, projects, onSave, onClear, onCancel, onOpenSh
         onChange={(v) => {
           setProject(v);
           setEditingProject(false);
+          commit({ project: v });
         }}
       >
         <div className="relative">
@@ -151,10 +165,14 @@ export function RowEditor({ block, projects, onSave, onClear, onCancel, onOpenSh
     );
   };
 
-  // Task/detail cells: plain text until clicked, then an input.
+  // Task/detail cells: plain text until clicked, then an input that saves on blur.
   const editableText = (field: Field, value: string, placeholder: string) => {
     if (active[field]) {
       const set = field === "task" ? setTask : setDetail;
+      const onBlur = () => {
+        setActive((a) => ({ ...a, [field]: false }));
+        commit({ [field]: value } as Partial<{ task: string; detail: string }>);
+      };
       return field === "detail" ? (
         <textarea
           autoFocus
@@ -162,6 +180,7 @@ export function RowEditor({ block, projects, onSave, onClear, onCancel, onOpenSh
           value={value}
           placeholder={placeholder}
           onChange={(e) => set(e.target.value)}
+          onBlur={onBlur}
           onKeyDown={(e) => onKey(e, true)}
           className={clsx(inputCls, "min-h-[32px] resize-y")}
         />
@@ -171,6 +190,7 @@ export function RowEditor({ block, projects, onSave, onClear, onCancel, onOpenSh
           value={value}
           placeholder={placeholder}
           onChange={(e) => set(e.target.value)}
+          onBlur={onBlur}
           onKeyDown={(e) => onKey(e)}
           className={inputCls}
         />
@@ -211,25 +231,25 @@ export function RowEditor({ block, projects, onSave, onClear, onCancel, onOpenSh
             <span className="text-[11px] uppercase tracking-wide text-ink-400">Type</span>
             <div className="inline-flex rounded-lg border border-ink-700 p-0.5">
               <button
-                onClick={() => setCat("work")}
+                onClick={() => setCategory("work")}
                 className={clsx("rounded-md px-3 py-1 text-xs font-medium transition", cat === "work" ? "bg-brand-600 text-white" : "text-ink-300 hover:text-ink-100")}
               >
                 Worked time
               </button>
               <button
-                onClick={() => setCat("break")}
+                onClick={() => setCategory("break")}
                 className={clsx("rounded-md px-3 py-1 text-xs font-medium transition", cat === "break" ? "bg-violet-500 text-white" : "text-ink-300 hover:text-ink-100")}
               >
                 Break / away
               </button>
             </div>
             <div className="flex-1" />
-            {block.edited && !dirty && (
+            {block.edited && (
               <Button variant="ghost" onClick={onClear}>
                 Clear edit
               </Button>
             )}
-            <Button variant="ghost" onClick={onCancel}>
+            <Button variant="ghost" onClick={onClose}>
               Close
             </Button>
           </div>
@@ -253,19 +273,6 @@ export function RowEditor({ block, projects, onSave, onClear, onCancel, onOpenSh
               </button>
             ))}
           </div>
-
-          {dirty && (
-            <div className="mt-3 flex items-center gap-3 rounded-lg border border-brand-600/40 bg-brand-600/10 px-3 py-2">
-              <span className="text-sm text-ink-100">You have unsaved changes.</span>
-              <div className="flex-1" />
-              <Button variant="secondary" onClick={onCancel}>
-                Discard
-              </Button>
-              <Button variant="primary" onClick={save}>
-                Save
-              </Button>
-            </div>
-          )}
         </td>
       </tr>
     </>

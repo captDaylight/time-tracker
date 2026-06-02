@@ -27,8 +27,15 @@ export function DayTimeline({ blocks, colors, activeId, onSelect }: Props) {
   const [hover, setHover] = useState<string | null>(null);
   if (!blocks.length) return null;
 
-  const dayStart = Math.min(...blocks.map((b) => b.start));
-  const dayEnd = Math.max(...blocks.map((b) => b.end));
+  // Drop leading "away" blocks (e.g. overnight sleep before the first activity) so
+  // the axis starts at the first real work/break and isn't dominated by idle time.
+  // Table still shows everything; this only reshapes the histogram.
+  const firstActive = blocks.findIndex((b) => b.type !== "away");
+  const shown = firstActive > 0 ? blocks.slice(firstActive) : blocks;
+  if (!shown.length) return null;
+
+  const dayStart = Math.min(...shown.map((b) => b.start));
+  const dayEnd = Math.max(...shown.map((b) => b.end));
   const span = dayEnd - dayStart;
   if (span <= 0) return null;
 
@@ -49,11 +56,22 @@ export function DayTimeline({ blocks, colors, activeId, onSelect }: Props) {
     <div className="mt-3">
       {/* Histogram track (blocks absolutely positioned by their real time) */}
       <div className="relative h-7 w-full overflow-hidden rounded-lg bg-ink-900 ring-1 ring-inset ring-ink-700">
-        {blocks.map((b) => {
+        {shown.map((b) => {
           const left = pctOf(b.start);
           const width = ((b.end - b.start) / span) * 100;
           const isActive = b.id === activeId;
           const isHover = b.id === hover;
+          // Break renders as a gray/black diagonal stripe so it reads as "not a task";
+          // everything else is a solid project/away color.
+          const style: React.CSSProperties =
+            b.type === "break"
+              ? {
+                  left: `${left}%`,
+                  width: `${width}%`,
+                  backgroundImage:
+                    "repeating-linear-gradient(45deg, #3a3f4b 0, #3a3f4b 4px, #16181d 4px, #16181d 8px)",
+                }
+              : { left: `${left}%`, width: `${width}%`, backgroundColor: blockColor(b, colors) };
           return (
             <button
               key={b.id}
@@ -65,7 +83,7 @@ export function DayTimeline({ blocks, colors, activeId, onSelect }: Props) {
                 "absolute top-0 h-full min-w-[1px] transition-[filter,opacity]",
                 isActive ? "z-10 opacity-100 brightness-125" : isHover ? "brightness-110" : "opacity-90 hover:opacity-100"
               )}
-              style={{ left: `${left}%`, width: `${width}%`, backgroundColor: blockColor(b, colors) }}
+              style={style}
               aria-label={`${labelFor(b)} ${Math.round(b.durationMin)} minutes`}
             />
           );
@@ -89,7 +107,7 @@ export function DayTimeline({ blocks, colors, activeId, onSelect }: Props) {
       <div className="mt-0.5 h-4 text-[11px] text-ink-400">
         {hover &&
           (() => {
-            const b = blocks.find((x) => x.id === hover);
+            const b = shown.find((x) => x.id === hover);
             return b ? (
               <span>
                 <span className="tabular-nums">{b.startLabel}–{b.endLabel}</span> ·{" "}

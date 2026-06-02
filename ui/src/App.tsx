@@ -8,7 +8,7 @@ import { RowEditor } from "./components/RowEditor";
 import { Lightbox } from "./components/Lightbox";
 import { PermissionBanner } from "./components/PermissionBanner";
 import { ProjectsManager } from "./components/ProjectsManager";
-import { StatCard, Chip, Badge, Button } from "./components/bits";
+import { StatCard, Chip, Badge, Button, STRIPE_BG } from "./components/bits";
 import { buildColorMap } from "./colors";
 
 const todayStr = () => new Date().toLocaleDateString("en-CA");
@@ -75,10 +75,11 @@ export default function App() {
     setCurrent(d);
   };
 
+  // Auto-save on blur/change: persist but keep the row open so multiple fields can
+  // be edited in sequence. The row closes only on explicit Close / Escape / click-out.
   const saveEdit = async (id: string, p: { category: "work" | "break"; project: string; task: string; detail: string }) => {
     const payload = await api.edit({ date: current, id, ...p });
     setData(payload);
-    setEditingId(null);
   };
   const clearEdit = async (id: string) => {
     const payload = await api.edit({ date: current, id, cleared: true });
@@ -145,7 +146,7 @@ export default function App() {
           <div className="mt-3 flex flex-wrap gap-2.5">
             <StatCard value={fmtH(summary.workMin)} label="Worked" tone="default" />
             <StatCard value={fmtH(summary.awayMin)} label="Away" tone="warn" />
-            <StatCard value={fmtH(summary.breakMin)} label="Break" tone="violet" />
+            <StatCard value={fmtH(summary.breakMin)} label="Break" tone="striped" />
           </div>
         )}
 
@@ -187,7 +188,7 @@ export default function App() {
                     projects={data!.projects}
                     onSave={(p) => saveEdit(b.id, p)}
                     onClear={() => clearEdit(b.id)}
-                    onCancel={() => setEditingId(null)}
+                    onClose={() => setEditingId(null)}
                     onOpenShot={(shots, index) => setLightbox({ shots, index })}
                   />
                 ) : (
@@ -219,9 +220,11 @@ export default function App() {
 
 function BlockRow({ block: b, color, onClick }: { block: UIBlock; color?: string; onClick: () => void }) {
   const toneText =
-    b.type === "away" ? "text-warn-500 italic" : b.type === "break" ? "text-violet-500" : "text-ink-100";
+    b.type === "away" ? "text-warn-500 italic" : b.type === "break" ? "text-ink-300" : "text-ink-100";
 
-  const dotColor = b.type === "away" ? "#3a3f4b" : b.type === "break" ? "#9b7ed6" : color ?? "#6b7280";
+  const isBreak = b.type === "break";
+  const dotColor = b.type === "away" ? "#3a3f4b" : color ?? "#6b7280";
+  const dotStyle: React.CSSProperties = isBreak ? { backgroundImage: STRIPE_BG } : { backgroundColor: dotColor };
 
   let projectCell: React.ReactNode;
   if (b.type === "away") projectCell = <>— away —<Badge tone="warn">fill in</Badge></>;
@@ -244,7 +247,7 @@ function BlockRow({ block: b, color, onClick }: { block: UIBlock; color?: string
       </td>
       <td className={clsx("px-3 py-2.5 text-sm", toneText)}>
         <span className="inline-flex items-center gap-1.5">
-          <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: dotColor }} />
+          <span className="size-2 shrink-0 rounded-full" style={dotStyle} />
           {projectCell}
         </span>
       </td>

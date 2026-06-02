@@ -22,7 +22,20 @@ export function summarize(blocks: Block[]): DaySummary {
   let breakMin = 0;
   const projects = new Map<string, { min: number; confs: Set<string> }>();
 
-  for (const b of blocks) {
+  // The working window runs from the first to the last work/break block. Away time
+  // is only counted *inside* this window (breaks between tasks), so overnight sleep
+  // before the first task and idle time after the last task don't inflate the total.
+  const isActive = (b: Block) => b.type === "work" || b.type === "break";
+  const firstActive = blocks.findIndex(isActive);
+  let lastActive = -1;
+  for (let i = blocks.length - 1; i >= 0; i--) {
+    if (isActive(blocks[i])) {
+      lastActive = i;
+      break;
+    }
+  }
+
+  blocks.forEach((b, i) => {
     if (b.type === "work") {
       workMin += b.durationMin;
       const key = b.project || "(unknown)";
@@ -30,12 +43,13 @@ export function summarize(blocks: Block[]): DaySummary {
       entry.min += b.durationMin;
       if (b.confidence) entry.confs.add(b.confidence);
       projects.set(key, entry);
-    } else if (b.type === "away") {
-      awayMin += b.durationMin;
     } else if (b.type === "break") {
       breakMin += b.durationMin;
+    } else if (b.type === "away") {
+      // Count away only when it sits between the first and last active block.
+      if (firstActive !== -1 && i > firstActive && i < lastActive) awayMin += b.durationMin;
     }
-  }
+  });
 
   const byProject = [...projects.entries()]
     .map(([project, v]) => ({
