@@ -1,10 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import clsx from "clsx";
-import { PencilIcon } from "@heroicons/react/16/solid";
-import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from "@headlessui/react";
-import { CheckIcon, ChevronUpDownIcon } from "@heroicons/react/20/solid";
-import { api, type Project, type Shot, type UIBlock } from "../api";
-import { Button } from "./bits";
+import { useEffect, useMemo, useState } from "react";
+import { Pencil } from "lucide-react";
+import { api, type Project, type Shot, type UIBlock } from "@/api";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ProjectDot } from "@/components/ProjectDot";
 
 interface Props {
   block: UIBlock;
@@ -40,7 +49,6 @@ export function RowEditor({ block, projects, onSave, onClear, onClose, onOpenSho
   const [task, setTask] = useState(orig.task);
   const [detail, setDetail] = useState(orig.detail);
   const [active, setActive] = useState<Partial<Record<Field, boolean>>>({});
-  const [editingProject, setEditingProject] = useState(false);
   const [shots, setShots] = useState<Shot[] | null>(null);
 
   useEffect(() => {
@@ -74,12 +82,12 @@ export function RowEditor({ block, projects, onSave, onClear, onClose, onOpenSho
   };
 
   // Click outside the row closes it. Changes have already auto-saved on blur.
-  // Ignore clicks inside any open popup/dialog (lightbox, listbox options).
+  // Ignore clicks inside any open popup/dialog (lightbox, Radix popper content).
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       const t = e.target as HTMLElement;
       if (t.closest(`[data-row-group="${block.id}"]`)) return;
-      if (t.closest('[role="dialog"]') || t.closest('[role="listbox"]')) return;
+      if (t.closest('[role="dialog"]') || t.closest("[data-radix-popper-content-wrapper]")) return;
       onClose();
     };
     document.addEventListener("mousedown", onDown);
@@ -102,66 +110,35 @@ export function RowEditor({ block, projects, onSave, onClear, onClose, onOpenSho
 
   const colorOf = (name: string) => projects.find((p) => p.name === name)?.color || "#6b7280";
 
-  const inputCls =
-    "w-full rounded-md border border-ink-600 bg-ink-900 px-2 py-1 text-sm text-ink-100 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500";
-
-  // Project cell: a dropdown of configured projects (with color dots). Saves on select.
+  // Project cell: a select of configured projects (with color dots). Saves on select.
   const projectCell = () => {
-    if (cat === "break") return <span className="text-sm text-ink-500 italic">Break / away</span>;
-    if (!editingProject) {
-      const empty = !project;
-      return (
-        <button
-          type="button"
-          onClick={() => setEditingProject(true)}
-          className={clsx(
-            "group/cell -mx-1 flex w-full items-center gap-1.5 rounded-md px-1 py-1 text-left text-sm hover:bg-ink-700/60",
-            empty ? "text-ink-500 italic" : "text-ink-100"
-          )}
-          title="Click to choose project"
-        >
-          {!empty && <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: colorOf(project) }} />}
-          <span className="truncate">{project || "Choose project"}</span>
-          <PencilIcon className="size-3 shrink-0 text-ink-500 opacity-0 transition group-hover/cell:opacity-100" />
-        </button>
-      );
-    }
+    if (cat === "break") return <span className="text-sm italic text-ink-500">Break / away</span>;
     return (
-      <Listbox
-        value={project}
-        onChange={(v) => {
+      <Select
+        value={project || undefined}
+        onValueChange={(v) => {
           setProject(v);
-          setEditingProject(false);
           commit({ project: v });
         }}
       >
-        <div className="relative">
-          <ListboxButton className="flex w-full items-center justify-between gap-1 rounded-md border border-ink-600 bg-ink-900 px-2 py-1 text-sm text-ink-100 focus:border-brand-500 focus:outline-none">
-            <span className="flex items-center gap-1.5 truncate">
-              {project && <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: colorOf(project) }} />}
-              <span className="truncate">{project || "Choose project"}</span>
-            </span>
-            <ChevronUpDownIcon className="size-4 shrink-0 text-ink-400" />
-          </ListboxButton>
-          <ListboxOptions
-            anchor="bottom start"
-            className="z-50 mt-1 max-h-60 w-[var(--button-width)] min-w-44 overflow-auto rounded-xl border border-ink-700 bg-ink-850 p-1 shadow-2xl focus:outline-none [--anchor-gap:4px]"
-          >
-            {projects.length === 0 && <div className="px-3 py-2 text-xs text-ink-400">No projects yet — add some in Projects.</div>}
-            {projects.map((p) => (
-              <ListboxOption
-                key={p.id}
-                value={p.name}
-                className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-ink-200 data-[focus]:bg-ink-700 data-[focus]:text-ink-100"
-              >
-                <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: p.color || "#6b7280" }} />
-                <span className="flex-1 truncate">{p.name}</span>
-                {p.name === project && <CheckIcon className="size-4 text-brand-500" />}
-              </ListboxOption>
-            ))}
-          </ListboxOptions>
-        </div>
-      </Listbox>
+        <SelectTrigger className="h-auto border-ink-600 bg-ink-900 px-2 py-1">
+          <SelectValue placeholder="Choose project">
+            {project && <ProjectDot color={colorOf(project)} />}
+            <span className="truncate">{project || "Choose project"}</span>
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent className="min-w-44">
+          {projects.length === 0 && (
+            <div className="px-3 py-2 text-xs text-ink-400">No projects yet — add some in Projects.</div>
+          )}
+          {projects.map((p) => (
+            <SelectItem key={p.id} value={p.name}>
+              <ProjectDot color={p.color || "#6b7280"} className="size-2.5" />
+              <span className="truncate">{p.name}</span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     );
   };
 
@@ -174,7 +151,7 @@ export function RowEditor({ block, projects, onSave, onClear, onClose, onOpenSho
         commit({ [field]: value } as Partial<{ task: string; detail: string }>);
       };
       return field === "detail" ? (
-        <textarea
+        <Textarea
           autoFocus
           rows={1}
           value={value}
@@ -182,17 +159,17 @@ export function RowEditor({ block, projects, onSave, onClear, onClose, onOpenSho
           onChange={(e) => set(e.target.value)}
           onBlur={onBlur}
           onKeyDown={(e) => onKey(e, true)}
-          className={clsx(inputCls, "min-h-[32px] resize-y")}
+          className="resize-y px-2 py-1"
         />
       ) : (
-        <input
+        <Input
           autoFocus
           value={value}
           placeholder={placeholder}
           onChange={(e) => set(e.target.value)}
           onBlur={onBlur}
           onKeyDown={(e) => onKey(e)}
-          className={inputCls}
+          className="px-2 py-1"
         />
       );
     }
@@ -201,14 +178,14 @@ export function RowEditor({ block, projects, onSave, onClear, onClose, onOpenSho
       <button
         type="button"
         onClick={() => setActive((a) => ({ ...a, [field]: true }))}
-        className={clsx(
+        className={cn(
           "group/cell -mx-1 flex w-full items-center gap-1 rounded-md px-1 py-1 text-left text-sm hover:bg-ink-700/60",
           empty ? "text-ink-500 italic" : "text-ink-100"
         )}
         title="Click to edit"
       >
         <span className="truncate">{value || placeholder}</span>
-        <PencilIcon className="size-3 shrink-0 text-ink-500 opacity-0 transition group-hover/cell:opacity-100" />
+        <Pencil className="size-3 shrink-0 text-ink-500 opacity-0 transition group-hover/cell:opacity-100" />
       </button>
     );
   };
@@ -222,34 +199,40 @@ export function RowEditor({ block, projects, onSave, onClear, onClose, onOpenSho
         <td className="px-2 py-2 align-top">{projectCell()}</td>
         <td className="px-2 py-2 align-top">{editableText("task", task, "Add task")}</td>
         <td className="px-2 py-2 align-top">{editableText("detail", detail, "Add details")}</td>
-        <td className="px-3 py-2 text-right align-top text-sm tabular-nums text-ink-300">{Math.round(block.durationMin)}</td>
+        <td className="px-3 py-2 text-right align-top text-sm tabular-nums text-ink-300">
+          {Math.round(block.durationMin)}
+        </td>
       </tr>
 
       <tr data-row-group={block.id} className="bg-ink-800/70">
-        <td colSpan={5} className="border-b border-ink-700 px-3 pb-4 pt-1">
+        <td colSpan={5} className="border-b border-ink-700 px-3 pt-1 pb-4">
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-[11px] uppercase tracking-wide text-ink-400">Type</span>
-            <div className="inline-flex rounded-lg border border-ink-700 p-0.5">
-              <button
-                onClick={() => setCategory("work")}
-                className={clsx("rounded-md px-3 py-1 text-xs font-medium transition", cat === "work" ? "bg-brand-600 text-white" : "text-ink-300 hover:text-ink-100")}
+            <ToggleGroup
+              type="single"
+              value={cat}
+              onValueChange={(v) => v && setCategory(v as "work" | "break")}
+            >
+              <ToggleGroupItem
+                value="work"
+                className="data-[state=on]:bg-brand-600 data-[state=on]:text-white"
               >
                 Worked time
-              </button>
-              <button
-                onClick={() => setCategory("break")}
-                className={clsx("rounded-md px-3 py-1 text-xs font-medium transition", cat === "break" ? "bg-violet-500 text-white" : "text-ink-300 hover:text-ink-100")}
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="break"
+                className="data-[state=on]:bg-violet-500 data-[state=on]:text-white"
               >
                 Break / away
-              </button>
-            </div>
+              </ToggleGroupItem>
+            </ToggleGroup>
             <div className="flex-1" />
             {block.edited && (
-              <Button variant="ghost" onClick={onClear}>
+              <Button variant="ghost" size="sm" onClick={onClear}>
                 Clear edit
               </Button>
             )}
-            <Button variant="ghost" onClick={onClose}>
+            <Button variant="ghost" size="sm" onClick={onClose}>
               Close
             </Button>
           </div>
@@ -257,9 +240,11 @@ export function RowEditor({ block, projects, onSave, onClear, onClose, onOpenSho
           <div className="mt-3 text-[11px] uppercase tracking-wide text-ink-400">Screenshots from this time</div>
           <div className="mt-2 flex gap-2.5 overflow-x-auto pb-1">
             {shots === null && <div className="text-sm text-ink-400">Loading…</div>}
-            {shots !== null && shots.length === 0 && <div className="text-sm text-ink-400">No screenshots captured during this block.</div>}
+            {shots !== null && shots.length === 0 && (
+              <div className="text-sm text-ink-400">No screenshots captured during this block.</div>
+            )}
             {shots?.map((s, idx) => (
-              <button key={s.file} onClick={() => onOpenShot(shots, idx)} className="group shrink-0 focus:outline-none">
+              <button key={s.file} onClick={() => onOpenShot(shots, idx)} className="group shrink-0 outline-none">
                 <img
                   src={api.shotUrl(s.file)}
                   loading="lazy"

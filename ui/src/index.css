@@ -1,6 +1,15 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-/* App theme tokens, exposed as Tailwind v4 theme colors. */
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * App theme. Two layers:
+ *   1. Raw palette tokens (`ink-*`, `brand-*`, …) — the original design system,
+ *      still referenced directly across the app and in colors.ts / histogram code.
+ *   2. shadcn semantic tokens (`--background`, `--primary`, …) mapped onto that
+ *      palette via `@theme inline`, so shadcn/Radix primitives render in-theme.
+ */
 @theme {
   --color-ink-950: #0f1115;
   --color-ink-900: #16181d;
@@ -18,13 +27,80 @@
   --color-warn-500: #e0a33e;
   --color-violet-500: #9b7ed6;
   --color-emerald-500: #4caf78;
+  --color-rose-400: #e0617d;
 }
 
-html,
-body {
-  background-color: var(--color-ink-950);
-  color: var(--color-ink-100);
-  -webkit-font-smoothing: antialiased;
+/* Semantic design tokens (dark-only app). */
+:root {
+  --radius: 0.625rem;
+
+  --background: var(--color-ink-950);
+  --foreground: var(--color-ink-100);
+
+  --card: var(--color-ink-900);
+  --card-foreground: var(--color-ink-100);
+
+  --popover: var(--color-ink-850);
+  --popover-foreground: var(--color-ink-100);
+
+  --primary: var(--color-brand-600);
+  --primary-foreground: #ffffff;
+
+  --secondary: var(--color-ink-800);
+  --secondary-foreground: var(--color-ink-100);
+
+  --muted: var(--color-ink-800);
+  --muted-foreground: var(--color-ink-400);
+
+  --accent: var(--color-ink-700);
+  --accent-foreground: var(--color-ink-100);
+
+  --destructive: var(--color-rose-400);
+  --destructive-foreground: #ffffff;
+
+  --border: var(--color-ink-800);
+  --input: var(--color-ink-700);
+  --ring: var(--color-brand-500);
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: var(--ring);
+  }
+  html,
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+  }
 }
 
 /* Thin, unobtrusive scrollbars to match the dark UI. */
