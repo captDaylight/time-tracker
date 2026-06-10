@@ -12,7 +12,8 @@
     "start": "npm run build && electron .",
     "export": "npm run build:main && node dist/cli-export.js",
     "icon": "node scripts/generate-icon.mjs",
-    "dist:win": "npm run build && electron-builder --win nsis"
+    "dist:win": "npm run build && electron-builder --win nsis",
+    "dist:mac": "npm run build && electron-builder --mac dmg"
   },
   "author": "",
   "license": "MIT",
@@ -61,6 +62,18 @@
     "win": {
       "target": "nsis",
       "artifactName": "TimeTracker-Setup-${version}.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity",
+      "artifactName": "TimeTracker-${version}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
