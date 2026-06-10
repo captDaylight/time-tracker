@@ -12,6 +12,11 @@ export default defineConfig({
   root: resolve(__dirname, "ui"),
   base: "./",
   plugins: [react(), tailwind()],
+  resolve: {
+    alias: {
+      "@": resolve(__dirname, "ui/src"),
+    },
+  },
   build: {
     outDir: resolve(__dirname, "resources/ui"),
     emptyOutDir: true,

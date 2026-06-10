@@ -1,7 +1,8 @@
 import { useState } from "react";
-import clsx from "clsx";
-import { fmtH, type UIBlock } from "../api";
-import { blockColor } from "../colors";
+import { cn } from "@/lib/utils";
+import { fmtH, type UIBlock } from "@/api";
+import { blockColor } from "@/colors";
+import { STRIPE_BAR } from "@/lib/stripes";
 
 interface Props {
   blocks: UIBlock[];
@@ -68,8 +69,7 @@ export function DayTimeline({ blocks, colors, activeId, onSelect }: Props) {
               ? {
                   left: `${left}%`,
                   width: `${width}%`,
-                  backgroundImage:
-                    "repeating-linear-gradient(45deg, #3a3f4b 0, #3a3f4b 4px, #16181d 4px, #16181d 8px)",
+                  backgroundImage: STRIPE_BAR,
                 }
               : { left: `${left}%`, width: `${width}%`, backgroundColor: blockColor(b, colors) };
           return (
@@ -79,7 +79,7 @@ export function DayTimeline({ blocks, colors, activeId, onSelect }: Props) {
               onMouseEnter={() => setHover(b.id)}
               onMouseLeave={() => setHover((h) => (h === b.id ? null : h))}
               title={`${b.startLabel}–${b.endLabel} · ${labelFor(b)} · ${Math.round(b.durationMin)}m`}
-              className={clsx(
+              className={cn(
                 "absolute top-0 h-full min-w-[1px] transition-[filter,opacity]",
                 isActive ? "z-10 opacity-100 brightness-125" : isHover ? "brightness-110" : "opacity-90 hover:opacity-100"
               )}
