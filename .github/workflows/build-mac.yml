@@ -34,8 +34,10 @@ jobs:
 
       - name: Package macOS disk image
         # npmRebuild:false in package.json keeps electron-builder from recompiling
-        # the N-API prebuild. CSC_IDENTITY_AUTODISCOVERY=false skips code signing
-        # so unsigned builds succeed without an Apple Developer certificate.
+        # the N-API prebuild. CSC_IDENTITY_AUTODISCOVERY=false skips real (Developer
+        # ID) code signing so builds succeed without an Apple Developer certificate.
+        # The afterPack hook (build/afterPack.cjs) then ad-hoc signs the .app so
+        # Apple Silicon macOS doesn't reject it as "damaged".
         env:
           CSC_IDENTITY_AUTODISCOVERY: false
         run: npx electron-builder --mac dmg --arm64 --publish never

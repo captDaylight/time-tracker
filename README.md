@@ -73,6 +73,33 @@ Edit `config.json`:
 - `taskRules[]` — map an `app` (and/or `urlContains` / `titleContains`) to a task label,
   e.g. InDesign → "Presentation drawing", Excel → "Bidding / documentation".
 
+## Build & install the macOS app
+
+```bash
+npm run dist:mac   # produces a .dmg under dist/ via electron-builder
+```
+
+The build is **ad-hoc signed**, not notarized (no Apple Developer certificate), so
+the first launch of a downloaded build is blocked by Gatekeeper. To open it:
+
+1. Drag **TimeTracker** into Applications.
+2. **Right-click the app → Open**, then confirm in the dialog. (Plain double-click
+   won't offer the option — you must use right-click → Open the first time.)
+
+After that first approval it opens normally. If macOS still refuses, clear the
+download-quarantine flag once:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/TimeTracker.app
+```
+
+### Updating
+
+Just download the new `.dmg` and drag the new app over the old one in Applications.
+**Your data is never touched** — samples, edits, screenshots and config live in
+`~/Library/Application Support/time-tracker/`, completely separate from the app
+bundle, so every update keeps your existing history.
+
 ## Build the Windows installer
 
 ```bash
