@@ -51,6 +51,7 @@
     "appId": "com.concislabs.timetracker",
     "productName": "TimeTracker",
     "npmRebuild": false,
+    "afterPack": "build/afterPack.cjs",
     "files": [
       "dist/**/*",
       "resources/**/*",
