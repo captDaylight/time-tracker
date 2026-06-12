@@ -50,6 +50,9 @@ export interface TaskRule {
 
 export interface Config {
   workHours: { start: string; end: string };
+  /** Start the tracker automatically at login/reboot (background) so the day is
+   * never missed. Managed via the OS login item; toggle from the tray menu. */
+  autoLaunch: boolean;
   /** Port the local web UI listens on (http://localhost:PORT). */
   httpPort: number;
   sampleIntervalSec: number;
