@@ -93,6 +93,17 @@ download-quarantine flag once:
 xattr -dr com.apple.quarantine /Applications/TimeTracker.app
 ```
 
+### Start automatically at login
+
+So the day is never missed, the tracker **registers itself to launch at login**
+(reboot) the first time you run an installed build — as a macOS *Login Item* and via
+the Windows *Run* registry key. When it's launched at login it starts **in the
+background** (tray/menu-bar only, no window) and begins sampling immediately.
+
+Toggle it any time from the tray/menu-bar icon → **"Start at login (background)"**.
+The choice is saved as `autoLaunch` in `config.json`. (This only applies to installed
+builds — running from source via `npm start` never touches your login items.)
+
 ### Updating
 
 Just download the new `.dmg` and drag the new app over the old one in Applications.

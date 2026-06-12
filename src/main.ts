@@ -1,7 +1,7 @@
 import { app, Tray, Menu, BrowserWindow, desktopCapturer, screen, powerMonitor, shell, nativeImage } from "electron";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { loadConfig, configPath } from "./config.js";
+import { loadConfig, saveConfig, configPath } from "./config.js";
 import { startSampler } from "./sampler.js";
 import { startServer, type RunningServer } from "./server.js";
 import { readSamples } from "./store.js";
@@ -12,6 +12,44 @@ import { writeCsv } from "./csv.js";
 import { exportsDir, dataDir, screenshotsDir } from "./paths.js";
 import { localDate } from "./timeutil.js";
 import type { Config } from "./types.js";
+
+/** Marker passed on Windows so a login-triggered launch can start hidden. */
+const HIDDEN_FLAG = "--hidden";
+
+/** True when this process was started by the OS at login (vs. opened by the user). */
+function wasOpenedAtLogin(): boolean {
+  if (process.platform === "darwin") return app.getLoginItemSettings().wasOpenedAtLogin;
+  return process.argv.includes(HIDDEN_FLAG);
+}
+
+/** Reconcile the OS login item (macOS Login Items / Windows Run key) with config.
+ * Only touches packaged builds — in dev this would register the Electron binary. */
+function syncAutoLaunch(config: Config): void {
+  if (!app.isPackaged) return;
+  try {
+    // Always apply the desired state — setLoginItemSettings is idempotent, and
+    // reading back via getLoginItemSettings is unreliable on Windows unless the
+    // exact same path/args are passed, which would make a disable silently no-op.
+    app.setLoginItemSettings({
+      openAtLogin: config.autoLaunch,
+      openAsHidden: true, // macOS: launch in the background without a window
+      path: process.execPath, // Windows: the installed executable
+      args: [HIDDEN_FLAG], // Windows: tell the login launch to stay hidden
+    });
+    console.log(`[autolaunch] open at login = ${config.autoLaunch}`);
+  } catch (err) {
+    console.error("[autolaunch] failed to set login item:", err);
+  }
+}
+
+/** Flip auto-launch on/off, persisting to config and updating the OS login item. */
+function setAutoLaunch(enabled: boolean): void {
+  const config = loadConfig();
+  config.autoLaunch = enabled;
+  saveConfig(config);
+  syncAutoLaunch(config);
+  tray?.setContextMenu(buildMenu()); // refresh the checkbox state without re-creating the tray
+}
 
 let tray: Tray | null = null;
 let win: BrowserWindow | null = null;
@@ -85,11 +123,8 @@ function showWindow(): void {
   });
 }
 
-function buildTray(): void {
-  tray = new Tray(nativeImage.createEmpty());
-  if (process.platform === "darwin") tray.setTitle(" ⏱");
-  tray.setToolTip("TimeTracker — passively recording your day");
-  const menu = Menu.buildFromTemplate([
+function buildMenu(): Menu {
+  return Menu.buildFromTemplate([
     { label: "Show window", click: showWindow },
     { label: "Open in browser", click: () => server && shell.openExternal(server.url) },
     { type: "separator" },
@@ -105,15 +140,30 @@ function buildTray(): void {
     { label: "Open screenshots folder", click: () => shell.openPath(screenshotsDir()) },
     { label: "Open config file", click: () => shell.openPath(configPath()) },
     { type: "separator" },
+    {
+      label: "Start at login (background)",
+      type: "checkbox",
+      checked: loadConfig().autoLaunch,
+      click: (item) => setAutoLaunch(item.checked),
+    },
+    { type: "separator" },
     { label: "Quit", click: () => app.quit() },
   ]);
-  tray.setContextMenu(menu);
+}
+
+function buildTray(): void {
+  tray = new Tray(nativeImage.createEmpty());
+  if (process.platform === "darwin") tray.setTitle(" ⏱");
+  tray.setToolTip("TimeTracker — passively recording your day");
+  tray.setContextMenu(buildMenu());
   tray.on("click", showWindow);
 }
 
 app.whenReady().then(async () => {
   const config = loadConfig();
   console.log(`[main] config at ${configPath()}`);
+
+  syncAutoLaunch(config);
 
   try {
     server = await startServer(config);
@@ -124,7 +174,8 @@ app.whenReady().then(async () => {
   buildTray();
   stopSampler = await startSampler(config);
   startScreenshots(config);
-  showWindow();
+  // When launched at login, stay in the background (tray only) — tracking still runs.
+  if (!wasOpenedAtLogin()) showWindow();
 
   powerMonitor.on("suspend", () => exportToday());
   powerMonitor.on("shutdown", () => exportToday());

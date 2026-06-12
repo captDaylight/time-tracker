@@ -4,6 +4,7 @@ import type { Config, ProjectRule } from "./types.js";
 
 export const DEFAULT_CONFIG: Config = {
   workHours: { start: "08:00", end: "19:00" },
+  autoLaunch: true,
   httpPort: 4321,
   sampleIntervalSec: 15,
   screenshotsEnabled: true,
